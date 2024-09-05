@@ -1,6 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
-using BenchmarkDotNet.Configs;
 using Microsoft.EntityFrameworkCore;
 using OptimizeMePlease.Context;
 using System;
@@ -182,6 +180,36 @@ namespace OptimizeMePlease
                 })
                 .Take(2)
                 .ToList();
+        }
+
+        [Benchmark]
+        public List<AuthorDTO_Optimized> GetAuthors_Optimized()
+        {
+            using var dbContext = new AppDbContext();
+
+            var authors = dbContext.Authors
+                                        .Include(x => x.Books.Where(a => a.Published.Year < 1900))
+                                        .Where(x => x.Country == "Serbia" && x.Age == 27)
+                                        .OrderByDescending(x => x.BooksCount)
+                                        .Select(x => new AuthorDTO_Optimized
+                                        {
+                                            FirstName = x.User.FirstName,
+                                            LastName = x.User.LastName,
+                                            UserName = x.User.UserName,
+                                            Email = x.User.Email,
+                                            Age = x.Age,
+                                            Country = x.Country,
+                                            Books = x.Books
+                                                .Select(y => new BookDTO_Optimized
+                                                {
+                                                    Title = y.Name,
+                                                    PublishedYear = y.Published.Year
+                                                }).ToList()
+                                        })
+                                        .Take(2)
+                                        .ToList();
+
+            return authors;
         }
     }
 }
